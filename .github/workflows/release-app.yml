@@ -1,0 +1,72 @@
+name: Release app
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: The name of the app, as druks check-app takes it.
+        required: true
+        type: string
+      druks-version:
+        description: The Druks release that the app runs on, for example 0.11.0.
+        required: true
+        type: string
+      python-version:
+        description: The Python version that Druks runs on.
+        default: "3.11"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      DRUKS_VERSION: ${{ inputs.druks-version }}
+      PYTHON: ${{ inputs.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          python-version: ${{ inputs.python-version }}
+      - run: uv build --wheel
+      - name: The tag is the version
+        run: |
+          version="$(uv version --short)"
+          test "${GITHUB_REF_NAME}" = "v${version}" \
+            || { echo "tag ${GITHUB_REF_NAME} != pyproject version ${version}"; exit 1; }
+      - name: The wheels that core lacks
+        run: |
+          distribution="$(uv version | cut -d' ' -f1)"
+          mkdir -p dist/deps
+          cd "${RUNNER_TEMP}"
+          curl -fsSL -O "https://raw.githubusercontent.com/czpython/druks/v${DRUKS_VERSION}/{pyproject.toml,uv.lock}"
+          uv export -q --frozen --no-dev --no-emit-project --no-hashes --no-header --no-annotate -o core.txt
+          uv pip compile -q "${GITHUB_WORKSPACE}/pyproject.toml" -c core.txt --python-version "${PYTHON}" \
+            --python-platform x86_64-manylinux_2_28 --only-binary :all: --no-header --no-annotate -o full.txt
+          names='s/[ ;=].*//; s/[-_.]+/-/g; s/.*/\L&/'
+          printf '%s\n' druks "${distribution}" | cat core.txt - | sed -E "${names}" | sort -u > shipped.txt
+          sed -E "${names}" full.txt | sort | comm -23 - shipped.txt | sed 's/.*/^&==/' > missing.txt
+          grep -f missing.txt full.txt > deps.txt || true
+          cat deps.txt
+          if [ -s deps.txt ]; then
+            uv tool run pip download --no-deps -r deps.txt --only-binary=:all: \
+              --platform manylinux_2_28_x86_64 --python-version "${PYTHON}" --implementation cp \
+              -d "${GITHUB_WORKSPACE}/dist/deps"
+          fi
+      - name: The app installs from these wheels beside core
+        run: |
+          uv venv "${RUNNER_TEMP}/proof"
+          uv pip install --python "${RUNNER_TEMP}/proof" "druks==${DRUKS_VERSION}"
+          uv pip install --python "${RUNNER_TEMP}/proof" --no-index --find-links dist/deps dist/*.whl
+          uv pip check --python "${RUNNER_TEMP}/proof"
+          "${RUNNER_TEMP}/proof/bin/druks" check-app "${APP}"
+      - run: cd dist && sha256sum *.whl > "$(ls *.whl).sha256" && cat *.sha256
+      - run: |
+          shopt -s nullglob
+          gh release create "${GITHUB_REF_NAME}" dist/*.whl dist/*.sha256 dist/deps/*.whl \
+            --title "${GITHUB_REF_NAME}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
