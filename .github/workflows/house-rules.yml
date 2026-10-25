@@ -4,8 +4,8 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: The git ref of druks-house-rules to install, a tag such as v0.1.0.
-        default: v0.1.0
+        description: The git ref of druks-house-rules to install, a tag such as v0.0.1.
+        default: v0.0.1
         type: string
       python-version:
         description: The Python version the check runs on.
