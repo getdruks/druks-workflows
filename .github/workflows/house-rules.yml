@@ -1,0 +1,47 @@
+name: House rules
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: The git ref of druks-house-rules to install, a tag such as v0.1.0.
+        default: v0.1.0
+        type: string
+      python-version:
+        description: The Python version the check runs on.
+        default: "3.11"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The head commit, not the merge commit, so the commits above the base are the branch's own.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install druks-house-rules
+        run: |
+          uv venv "${RUNNER_TEMP}/house-rules"
+          uv pip install --python "${RUNNER_TEMP}/house-rules" \
+            "git+https://github.com/getdruks/druks-house-rules@${REF}"
+        env:
+          REF: ${{ inputs.ref }}
+      - name: Check the change against the base
+        run: |
+          printf '%s' "${PR_BODY}" > "${RUNNER_TEMP}/pr-body.md"
+          "${RUNNER_TEMP}/house-rules/bin/druks-house-rules" check \
+            --base "origin/${BASE}" \
+            --pr-title "${PR_TITLE}" \
+            --pr-body-file "${RUNNER_TEMP}/pr-body.md"
+        env:
+          BASE: ${{ github.base_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
