@@ -55,6 +55,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   house-rules:

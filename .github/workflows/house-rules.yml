@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   check:
@@ -35,13 +36,15 @@ jobs:
         env:
           REF: ${{ inputs.ref }}
       - name: Check the change against the base
+        # The API, not the event payload, so a rerun sees an edited title or body.
         run: |
-          printf '%s' "${PR_BODY}" > "${RUNNER_TEMP}/pr-body.md"
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" > "${RUNNER_TEMP}/pr.json"
+          jq -r '.body // ""' "${RUNNER_TEMP}/pr.json" > "${RUNNER_TEMP}/pr-body.md"
           "${RUNNER_TEMP}/house-rules/bin/druks-house-rules" check \
             --base "origin/${BASE}" \
-            --pr-title "${PR_TITLE}" \
+            --pr-title "$(jq -r .title "${RUNNER_TEMP}/pr.json")" \
             --pr-body-file "${RUNNER_TEMP}/pr-body.md"
         env:
           BASE: ${{ github.base_ref }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
