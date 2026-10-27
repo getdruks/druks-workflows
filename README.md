@@ -43,7 +43,7 @@ Pin `v1`. We move the `v1` tag on each compatible change.
 `house-rules` holds a pull request to the rules of `druks-house-rules`. It
 installs the package from its repository, then runs `druks-house-rules check`
 against the base branch with the pull request title and body. The check reads
-`druks-house-rules.toml` in the repository root.
+`.druks/house_rules/config.yml` in the repository.
 
 Call it from `.github/workflows/house-rules.yml` in the repository:
 
