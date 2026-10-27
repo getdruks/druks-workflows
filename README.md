@@ -52,6 +52,7 @@ name: House rules
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
