@@ -37,31 +37,3 @@ jobs:
 `app` is the name that `druks check-app` takes.
 
 Pin `v1`. We move the `v1` tag on each compatible change.
-
-## house-rules
-
-`house-rules` holds a pull request to the rules of `druks-house-rules`. It
-installs the package from its repository, then runs `druks-house-rules check`
-against the base branch with the pull request title and body. The check reads
-`.druks/house_rules/config.yml` in the repository.
-
-Call it from `.github/workflows/house-rules.yml` in the repository:
-
-```yaml
-name: House rules
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited]
-
-permissions:
-  contents: read
-  pull-requests: read
-
-jobs:
-  house-rules:
-    uses: getdruks/druks-workflows/.github/workflows/house-rules.yml@v1
-```
-
-`ref` is the git ref of `druks-house-rules` to install; it defaults to the
-current release tag.
