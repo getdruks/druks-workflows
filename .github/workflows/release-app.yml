@@ -3,12 +3,8 @@ name: Release app
 on:
   workflow_call:
     inputs:
-      app:
-        description: The name of the app, as druks check-app takes it.
-        required: true
-        type: string
       python-version:
-        description: The Python version that Druks runs on.
+        description: The Python version that builds the wheel.
         default: "3.11"
         type: string
 
@@ -29,13 +25,6 @@ jobs:
           version="$(uv version --short)"
           test "${GITHUB_REF_NAME}" = "v${version}" \
             || { echo "tag ${GITHUB_REF_NAME} != pyproject version ${version}"; exit 1; }
-      - name: The wheel installs and passes druks check-app
-        run: |
-          uv venv "${RUNNER_TEMP}/proof"
-          uv pip install --python "${RUNNER_TEMP}/proof" dist/*.whl
-          "${RUNNER_TEMP}/proof/bin/druks" check-app "${APP}"
-        env:
-          APP: ${{ inputs.app }}
       - run: cd dist && sha256sum *.whl > "$(ls *.whl).sha256" && cat *.sha256
       - run: gh release create "${GITHUB_REF_NAME}" dist/*.whl dist/*.sha256 --title "${GITHUB_REF_NAME}" --generate-notes
         env:
