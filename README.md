@@ -11,9 +11,7 @@ The workflow does these steps:
 
 1. It builds the wheel of the app.
 2. It makes sure that the tag is `v` followed by the version in `pyproject.toml`.
-3. It installs the wheel with its dependencies in a new environment, then runs
-   `druks check-app`.
-4. It creates the GitHub release with the wheel and its `.sha256`.
+3. It creates the GitHub release with the wheel and its `.sha256`.
 
 Call it from `.github/workflows/release.yml` in the app repository:
 
@@ -30,12 +28,6 @@ permissions:
 jobs:
   release:
     uses: getdruks/druks-workflows/.github/workflows/release-app.yml@v1
-    with:
-      app: site_builder
 ```
-
-`app` is the name that `druks check-app` takes. `extras` names the extras of the
-app that the proof installs, for example `app` when the app keeps `druks` in an
-extra so that its command line installs stay free of Druks.
 
 Pin `v1`. We move the `v1` tag on each compatible change.
