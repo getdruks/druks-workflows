@@ -34,6 +34,8 @@ jobs:
       app: site_builder
 ```
 
-`app` is the name that `druks check-app` takes.
+`app` is the name that `druks check-app` takes. `extras` names the extras of the
+app that the proof installs, for example `app` when the app keeps `druks` in an
+extra so that its command line installs stay free of Druks.
 
 Pin `v1`. We move the `v1` tag on each compatible change.

@@ -11,6 +11,10 @@ on:
         description: The Python version that Druks runs on.
         default: "3.11"
         type: string
+      extras:
+        description: The extras of the app that the proof installs, for example app.
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -32,10 +36,11 @@ jobs:
       - name: The wheel installs and passes druks check-app
         run: |
           uv venv "${RUNNER_TEMP}/proof"
-          uv pip install --python "${RUNNER_TEMP}/proof" dist/*.whl
+          uv pip install --python "${RUNNER_TEMP}/proof" "$(ls dist/*.whl)${EXTRAS:+[${EXTRAS}]}"
           "${RUNNER_TEMP}/proof/bin/druks" check-app "${APP}"
         env:
           APP: ${{ inputs.app }}
+          EXTRAS: ${{ inputs.extras }}
       - run: cd dist && sha256sum *.whl > "$(ls *.whl).sha256" && cat *.sha256
       - run: gh release create "${GITHUB_REF_NAME}" dist/*.whl dist/*.sha256 --title "${GITHUB_REF_NAME}" --generate-notes
         env:
